@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  primer:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs12.x
+      Handler: index.handler
+      FunctionName: callTextractFun
+      Role: "arn:aws:iam::846012231667:role/service-role/textract-practice-role-kguqfjxl"
+      Code:
+        ZipFile: |
+          var AWS = require("aws-sdk");
+
+          exports.handler = async (event) => {
+              
+              // Input for textract will be S3 object
+              console.log(JSON.stringify(event));
+              AWS.config.region = "us-east-2";
+              var textract = new AWS.Textract({ apiVersion: "2018-06-27" });
+                console.log(textract);
+                
+                
+              var params = {
+              Document: {
+                /* required */
+                S3Object: {
+                  Bucket: "cloud-practice-s3",
+                  Name: event,
+                }
+              }
+            };
+
+              
+            const data = await textract.detectDocumentText(params).promise();
+            let detectedText = '';
+            console.log(data['Blocks'][0]);
+            const store = data['Blocks'];
+            for(let item in store ){
+              if(store[item]['BlockType'] === 'LINE')
+              {
+                detectedText += store[item]['Text'] + '\n'   
+              }
+            }
+
+            console.log(detectedText);
+              const splittedData = detectedText.split("Registration No:").pop();
+                const finalNumber = splittedData.toString().split('"');
+                const registrationNumber = finalNumber.toString().split("\n");
+                console.log(registrationNumber[0].replace(" ",""));
+                let number = parseInt(registrationNumber[0].replace(" ",""))
+            return number;
+              
+          };
+
+      Description: Invoke a function during stack creation.
